@@ -1,5 +1,5 @@
 import re
-import json
+import yaml
 import typing
 import pydantic
 
@@ -36,9 +36,10 @@ class NjordrConfig:
     def __new__(cls) -> type:
         if cls.__instance is None:
 
-            with open("config.json", mode="r", encoding="utf-8") as config_file:
-                config_json = json.load(config_file)
-            cls.__instance = NjordrConfigModel(bots=config_json)
+            with open("config.yaml", mode="r", encoding="utf-8") as config_file:
+                config_obj = yaml.load(config_file)
+
+            cls.__instance = NjordrConfigModel(bots=config_obj)
 
         return cls.__instance
 

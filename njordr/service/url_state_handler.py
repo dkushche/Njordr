@@ -28,6 +28,5 @@ class UrlStateHandler:
 
         return self.__state_data["url"]
 
-
     async def __aexit__(self, *_):
         await self.__state.update_data(self.__state_data)

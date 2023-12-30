@@ -1,6 +1,7 @@
 import sys
 import logging
 
+import json
 import config
 
 import httpx
@@ -21,7 +22,8 @@ async def make_service_call(
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f'{bot_config.url}{endpoint}')
-            print(response)
+
+            print(f"{type(response.content)}: {response.content}")
     except (httpx.ConnectError, httpx.ConnectTimeout) as e:
         print(f"Caught: {e}")
 
