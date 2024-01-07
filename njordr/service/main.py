@@ -1,15 +1,16 @@
+"""
+Njordr broker service main
+* Listens for telegram requests
+* Proxies to specific bots
+* Replies back in the telegram
+"""
+
 import sys
 import logging
-
-import json
 import config
-
 import httpx
-
 import url_state_handler
-
 import asyncio
-
 import aiogram
 import aiogram.types
 import aiogram.filters
