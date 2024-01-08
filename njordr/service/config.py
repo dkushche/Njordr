@@ -4,6 +4,7 @@ Configuration file entities models
 
 import re
 import typing
+from typing import Any
 import pydantic
 
 import yaml
@@ -130,74 +131,58 @@ class NjordrConfigModel(pydantic.BaseModel):
 
         return self.bots[key]
 
-class NjordrConfig:
+
+class Singletone(type):
     """
-    Singleton class representing the configuration for the Njordr application.
-
-    This class uses the Singleton pattern to ensure that only one instance of
-    the configuration is created, and subsequent attempts to create instances
-    return the existing instance.
-
-    Methods:
-        __new__(cls) -> type:
-            Creates a new instance of the NjordrConfigModel using data from the
-            "config.yaml" file. Returns the existing instance if it already exists.
-
-    Note:
-        The configuration is loaded from a YAML file and used to create an instance
-        of the NjordrConfigModel class. Subsequent attempts to create instances return
-        the same configuration, ensuring that there is only one configuration object.
+    Singletone metaclass for making singletones
     """
 
-    __instance: NjordrConfigModel | None = None
+    __instances: dict[type, Any] = {}
 
-    def __new__(cls) -> NjordrConfigModel:
-        """
-        Create a new instance of the NjordrConfigModel.
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls.__instances:
+            cls.__instances[cls] = super().__call__(*args, **kwargs)
 
-        Returns:
-            NjordrConfigModel:
-                The instance of NjordrConfigModel created from the "config.yaml" file.
-        """
+        return cls.__instances[cls]
 
-        if cls.__instance is None:
+class NjordrConfig(metaclass=Singletone):
+    """
+    NjordrConfig singletone
+    """
+
+    __model: typing.Optional[NjordrConfigModel] = None
+
+    def __init__(self) -> None:
+        if self.__model is None:
             with open("config.yaml", mode="r", encoding="utf-8") as config_file:
                 config_obj = yaml.safe_load(config_file)
 
-            cls.__instance = NjordrConfigModel(bots=config_obj)
+            self.__model = NjordrConfigModel(bots=config_obj)
 
-        return cls.__instance
+    def __setattr__(self, name: str, value: typing.Any) -> None:
+        if "__" in name:
+            super().__setattr__(name, value)
+        else:
+            raise AttributeError("Object is readonly")
 
-class BotConfig:
+    def __getattribute__(self, name: str) -> Any:
+        if "__" in name:
+            return super().__getattribute__(name)
+
+        return getattr(self.__model, name)
+
+
+def get_bot_config(bot_id: int) -> BotConfigModel:
     """
-    Class providing access to the configuration of a specific bot from the Njordr application.
+    Retrieve the configuration for an individual bot.
 
-    This class is designed to be used to retrieve the configuration of a specific bot based
-    on its ID from the NjordrConfigModel.
+    Args:
+        bot_id (str): The identifier of the bot.
 
-    Methods:
-        __new__(cls, bot_id) -> NjordrConfigModel:
-            Creates a new instance of the NjordrConfigModel using the NjordrConfig singleton
-            and retrieves the configuration for the specified bot ID.
-
-        Parameters:
-            bot_id: The ID of the bot for which to retrieve the configuration.
-
-        Returns:
-            NjordrConfigModel: The configuration for the specified bot.
+    Returns:
+        BotConfigModel: An instance of the BotConfigModel representing the
+        configuration for the specified bot.
     """
 
-    def __new__(cls, bot_id) -> BotConfigModel:
-        """
-        Create a new instance of the NjordrConfigModel and retrieve the configuration for a bot.
-
-        Args:
-            bot_id: The ID of the bot for which to retrieve the configuration.
-
-        Returns:
-            BotConfigModel: The configuration for the specified bot.
-        """
-
-        njordr_config: NjordrConfigModel = NjordrConfig()
-
-        return njordr_config[str(bot_id)]
+    njordr_config: NjordrConfig = NjordrConfig()
+    return njordr_config.bots[str(bot_id)]

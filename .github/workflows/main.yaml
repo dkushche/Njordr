@@ -29,9 +29,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/dev.txt
       - name: Analysing the code with pylint
-        run: pylint `find . -name "*.py"`
+        run: pylint `find njordr -name "*.py"`
       - name: Analysing the typing with mypy
-        run: mypy `find . -name "*.py"`
+        run: mypy `find njordr -name "*.py"`
 
   deploy_documentation:
     environment:
