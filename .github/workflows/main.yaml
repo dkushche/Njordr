@@ -6,11 +6,6 @@ on:
 
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -19,11 +14,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.x'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -33,14 +28,50 @@ jobs:
       - name: Analysing the typing with mypy
         run: mypy `find njordr -name "*.py"`
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./dist
+
+  deploy_pypi:
+    needs: ['lint', 'build']
+    environment:
+      name: 'publish'
+      url: https://pypi.org/project/njordr
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages_dir: artifact/
+
   deploy_documentation:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install sphinx
         run: sudo apt-get install -y python3-sphinx
       - name: Install m2r

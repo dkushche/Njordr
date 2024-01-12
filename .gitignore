@@ -3,3 +3,4 @@ config.yaml
 build
 njordr.egg-info
 .mypy_cache
+dist
