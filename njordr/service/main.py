@@ -6,9 +6,12 @@ Njordr broker service main
 """
 
 import sys
+import ssl
 import logging
 import asyncio
 import httpx
+
+import uvicorn
 
 import aiogram
 import aiogram.types
@@ -131,6 +134,10 @@ async def callback_query_handler(
         await callback_query.answer(str(bot_config.url))
 
 
+async def notifications(scope, receive, send):
+    pass
+
+
 async def main():
     """
     Main function for initializing and running the Aiogram bots.
@@ -152,7 +159,7 @@ async def main():
     dp.callback_query.register(callback_query_handler)
 
     bots = []
-    for bot_config in njordr_config.bots.values():
+    for bot_config in njordr_config.cfg.bots.values():
         bot = aiogram.Bot(
             token=bot_config.token,
             parse_mode=aiogram.enums.ParseMode.HTML,
@@ -166,7 +173,24 @@ async def main():
 
         bots.append(bot)
 
-    await dp.start_polling(*bots)
+    notificaton_config = uvicorn.Config(
+        "main:notifications",
+        ssl_cert_reqs=ssl.CERT_REQUIRED,
+        ssl_ca_certs=njordr_config.cfg.tls.ca,
+        ssl_certfile=njordr_config.cfg.tls.cert,
+        ssl_keyfile=njordr_config.cfg.tls.key,
+        port=njordr_config.cfg.port
+    )
+
+    notification_server = uvicorn.Server(notificaton_config)
+
+    await asyncio.wait(
+        [
+            notification_server.serve(),
+            dp.start_polling(*bots),
+        ],
+        return_when=asyncio.FIRST_COMPLETED
+    )
 
 
 if __name__ == "__main__":

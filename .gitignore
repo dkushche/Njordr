@@ -4,3 +4,4 @@ build
 njordr.egg-info
 .mypy_cache
 dist
+tls

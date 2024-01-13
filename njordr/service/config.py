@@ -75,6 +75,46 @@ class BotConfigModel(pydantic.BaseModel):
         raise AttributeError("Object is readonly")
 
 
+class TLSConfigModel(pydantic.BaseModel):
+    cert: pydantic.FilePath
+    key: pydantic.FilePath
+    ca: pydantic.FilePath
+
+    def __setattr__(self, _: str, __: typing.Any) -> None:
+        """
+        Override the default __setattr__ method to make the object readonly.
+
+        Args:
+            _: Ignored parameter.
+            __: Ignored parameter.
+
+        Raises:
+            AttributeError: If any attempt is made to modify the object.
+        """
+
+        raise AttributeError("Object is readonly")
+
+
+class TopSectionsConfigModel(pydantic.BaseModel):
+    port: pydantic.PositiveInt
+    tls: TLSConfigModel
+    bots: typing.Dict[str, BotConfigModel]
+
+    def __setattr__(self, _: str, __: typing.Any) -> None:
+        """
+        Override the default __setattr__ method to make the object readonly.
+
+        Args:
+            _: Ignored parameter.
+            __: Ignored parameter.
+
+        Raises:
+            AttributeError: If any attempt is made to modify the object.
+        """
+
+        raise AttributeError("Object is readonly")
+
+
 class NjordrConfigModel(pydantic.BaseModel):
     """
     A Pydantic model representing the configuration for the Njordr application.
@@ -102,7 +142,7 @@ class NjordrConfigModel(pydantic.BaseModel):
         The object is made readonly, preventing modifications after instantiation.
     """
 
-    bots: typing.Dict[str, BotConfigModel]
+    cfg: TopSectionsConfigModel
 
     def __setattr__(self, _: str, __: typing.Any) -> None:
         """
@@ -129,7 +169,7 @@ class NjordrConfigModel(pydantic.BaseModel):
             BotConfigModel: The configuration for the specified bot.
         """
 
-        return self.bots[key]
+        return self.cfg.bots[key]
 
 
 class Singletone(type):
@@ -157,7 +197,7 @@ class NjordrConfig(metaclass=Singletone):
             with open("config.yaml", mode="r", encoding="utf-8") as config_file:
                 config_obj = yaml.safe_load(config_file)
 
-            self.__model = NjordrConfigModel(bots=config_obj)
+            self.__model = NjordrConfigModel(cfg=config_obj)
 
     def __setattr__(self, name: str, value: typing.Any) -> None:
         if "__" in name:
@@ -185,4 +225,4 @@ def get_bot_config(bot_id: int) -> BotConfigModel:
     """
 
     njordr_config: NjordrConfig = NjordrConfig()
-    return njordr_config.bots[str(bot_id)]
+    return njordr_config.cfg.bots[str(bot_id)]
