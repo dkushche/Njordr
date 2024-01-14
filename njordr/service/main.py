@@ -45,7 +45,8 @@ async def make_service_call(
 
     try:
         async with httpx.AsyncClient(
-            cert=(njordr_config.cfg.tls.cert, njordr_config.cfg.tls.key)
+            cert=(njordr_config.cfg.tls.cert, njordr_config.cfg.tls.key),
+            verify=njordr_config.cfg.tls.ca
         ) as client:
 
             response = await client.get(
