@@ -76,6 +76,24 @@ class BotConfigModel(pydantic.BaseModel):
 
 
 class TLSConfigModel(pydantic.BaseModel):
+    """
+    A Pydantic model representing the TLS configuration for a server.
+
+    Attributes:
+        cert (pydantic.FilePath): Path to the TLS certificate file.
+        key (pydantic.FilePath): Path to the TLS private key file.
+        ca (pydantic.FilePath): Path to the TLS certificate authority file.
+
+    Methods:
+        __setattr__(self, _: str, __: typing.Any) -> None:
+            Overrides the default __setattr__ method to make the object readonly.
+            Raises an AttributeError if any attempt is made to modify the object.
+
+    Note:
+        This class is a Pydantic BaseModel, providing data validation and parsing.
+        The object is made readonly, preventing modifications after instantiation.
+    """
+
     cert: pydantic.FilePath
     key: pydantic.FilePath
     ca: pydantic.FilePath
@@ -96,6 +114,24 @@ class TLSConfigModel(pydantic.BaseModel):
 
 
 class TopSectionsConfigModel(pydantic.BaseModel):
+    """
+    A Pydantic model representing the configuration for top sections.
+
+    Attributes:
+        port (pydantic.PositiveInt): The port number for the server.
+        tls (TLSConfigModel): The TLS configuration for the server.
+        bots (typing.Dict[str, BotConfigModel]): A dictionary of bot configurations.
+
+    Methods:
+        __setattr__(self, _: str, __: typing.Any) -> None:
+            Overrides the default __setattr__ method to make the object readonly.
+            Raises an AttributeError if any attempt is made to modify the object.
+
+    Note:
+        This class is a Pydantic BaseModel, providing data validation and parsing.
+        The object is made readonly, preventing modifications after instantiation.
+    """
+
     port: pydantic.PositiveInt
     tls: TLSConfigModel
     bots: typing.Dict[str, BotConfigModel]

@@ -12,6 +12,7 @@ import asyncio
 import httpx
 
 import uvicorn
+import fastapi
 
 import aiogram
 import aiogram.types
@@ -134,8 +135,16 @@ async def callback_query_handler(
         await callback_query.answer(str(bot_config.url))
 
 
-async def notifications(scope, receive, send):
-    pass
+notifications_api = fastapi.FastAPI()
+
+@notifications_api.post("/notifiaction")
+async def notification(req: fastapi.Request):
+    """
+    Under development
+    """
+
+    print(req)
+    return {"message": "kek"}
 
 
 async def main():
@@ -174,7 +183,7 @@ async def main():
         bots.append(bot)
 
     notificaton_config = uvicorn.Config(
-        "main:notifications",
+        "main:notifications_api",
         ssl_cert_reqs=ssl.CERT_REQUIRED,
         ssl_ca_certs=njordr_config.cfg.tls.ca,
         ssl_certfile=njordr_config.cfg.tls.cert,
