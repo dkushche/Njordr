@@ -5,6 +5,7 @@ Njordr broker service main
 * Replies back in the telegram
 """
 
+import os
 import sys
 import ssl
 import logging
@@ -159,7 +160,7 @@ async def main():
         asyncio.run(main())
     """
 
-    njordr_config = config.NjordrConfig()
+    njordr_config = config.NjordrConfig(os.environ["NJORDR_CONFIG_DIR"])
     dp = aiogram.Dispatcher()
 
     dp.message.register(start_handler, aiogram.filters.CommandStart())

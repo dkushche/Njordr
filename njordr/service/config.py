@@ -228,10 +228,13 @@ class NjordrConfig(metaclass=Singletone):
 
     __model: typing.Optional[NjordrConfigModel] = None
 
-    def __init__(self) -> None:
+    def __init__(self, config_dir) -> None:
         if self.__model is None:
-            with open("config.yaml", mode="r", encoding="utf-8") as config_file:
+            with open(f"{config_dir}/config.yaml", mode="r", encoding="utf-8") as config_file:
                 config_obj = yaml.safe_load(config_file)
+
+            for key, value in config_obj["tls"].items():
+                config_obj["tls"][key] = f"{config_dir}/{value}"
 
             self.__model = NjordrConfigModel(cfg=config_obj)
 
