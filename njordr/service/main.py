@@ -194,13 +194,10 @@ async def main():
 
     notification_server = uvicorn.Server(notificaton_config)
 
-    await asyncio.wait(
-        [
-            notification_server.serve(),
-            dp.start_polling(*bots),
-        ],
-        return_when=asyncio.FIRST_COMPLETED
-    )
+    asyncio.create_task(notification_server.serve())
+
+    await asyncio.create_task(dp.start_polling(*bots))
+    await notification_server.shutdown()
 
 
 if __name__ == "__main__":
