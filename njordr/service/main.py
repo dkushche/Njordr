@@ -196,6 +196,7 @@ async def main():
         ssl_ca_certs=njordr_config.cfg.tls.ca,
         ssl_certfile=njordr_config.cfg.tls.cert,
         ssl_keyfile=njordr_config.cfg.tls.key,
+        host="0.0.0.0",
         port=njordr_config.cfg.port
     )
 
