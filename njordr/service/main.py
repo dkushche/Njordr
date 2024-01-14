@@ -41,9 +41,16 @@ async def make_service_call(
         await make_service_call(bot_config_instance, "/some_endpoint")
     """
 
+    njordr_config = config.NjordrConfig()
+
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f'{bot_config.url}{endpoint}')
+        async with httpx.AsyncClient(
+            cert=(njordr_config.cfg.tls.cert, njordr_config.cfg.tls.key)
+        ) as client:
+
+            response = await client.get(
+                f'{bot_config.url}{endpoint}',
+            )
 
             print(f"{type(response.content)}: {response.content!r}")
 
