@@ -228,7 +228,7 @@ class NjordrConfig(metaclass=Singletone):
 
     __model: typing.Optional[NjordrConfigModel] = None
 
-    def __init__(self, config_dir) -> None:
+    def __init__(self, config_dir: typing.Optional[str]) -> None:
         if self.__model is None:
             with open(f"{config_dir}/config.yaml", mode="r", encoding="utf-8") as config_file:
                 config_obj = yaml.safe_load(config_file)
@@ -263,5 +263,5 @@ def get_bot_config(bot_id: int) -> BotConfigModel:
         configuration for the specified bot.
     """
 
-    njordr_config: NjordrConfig = NjordrConfig()
+    njordr_config: NjordrConfig = NjordrConfig(None)
     return njordr_config.cfg.bots[str(bot_id)]

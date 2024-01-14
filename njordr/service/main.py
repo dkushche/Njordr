@@ -20,8 +20,8 @@ import aiogram.types
 import aiogram.filters
 import aiogram.fsm.context
 
-import config
 import url_state_handler
+import config
 
 async def make_service_call(
     bot_config: config.BotConfigModel,
