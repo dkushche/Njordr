@@ -1,7 +1,6 @@
 __pycache__
-config.yaml
 build
 njordr.egg-info
 .mypy_cache
 dist
-tls
+njordr_config

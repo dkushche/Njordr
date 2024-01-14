@@ -4,7 +4,6 @@ Configuration file entities models
 
 import re
 import typing
-from typing import Any
 import pydantic
 
 import yaml
@@ -213,7 +212,7 @@ class Singletone(type):
     Singletone metaclass for making singletones
     """
 
-    __instances: dict[type, Any] = {}
+    __instances: dict[type, typing.Any] = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls.__instances:
@@ -244,7 +243,7 @@ class NjordrConfig(metaclass=Singletone):
         else:
             raise AttributeError("Object is readonly")
 
-    def __getattribute__(self, name: str) -> Any:
+    def __getattribute__(self, name: str) -> typing.Any:
         if "__" in name:
             return super().__getattribute__(name)
 
