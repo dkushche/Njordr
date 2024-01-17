@@ -44,17 +44,19 @@ async def make_service_call(
     njordr_config = config.NjordrConfig()
 
     try:
-        async with httpx.AsyncClient(
-            cert=(njordr_config.cfg.tls.cert, njordr_config.cfg.tls.key),
-            verify=njordr_config.cfg.tls.ca
-        ) as client:
-
-            response = await client.get(
-                f'{bot_config.url}{endpoint}',
+        client = httpx.Client(
+            verify=njordr_config.cfg.tls.ca,
+            cert=(
+                njordr_config.cfg.tls.client_cert,
+                njordr_config.cfg.tls.client_key
             )
+        )
 
-            print(f"{type(response.content)}: {response.content!r}")
+        response = client.get(
+            f'{bot_config.url}{endpoint}',
+        )
 
+        print(f"{type(response.content)}: {response.content!r}")
     except (httpx.ConnectError, httpx.ConnectTimeout) as e:
         print(f"Caught: {e}")
 
@@ -83,6 +85,8 @@ async def start_handler(
     async with url_state_handler.UrlStateHandler("/", state, False) as url:
         if message.bot is None:
             raise ValueError("Figure out with this")
+
+        print(url)
 
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
         await make_service_call(bot_config, url)
@@ -195,8 +199,8 @@ async def main():
         "main:notifications_api",
         ssl_cert_reqs=ssl.CERT_REQUIRED,
         ssl_ca_certs=njordr_config.cfg.tls.ca,
-        ssl_certfile=njordr_config.cfg.tls.cert,
-        ssl_keyfile=njordr_config.cfg.tls.key,
+        ssl_certfile=njordr_config.cfg.tls.server_cert,
+        ssl_keyfile=njordr_config.cfg.tls.server_key,
         host="0.0.0.0",
         port=njordr_config.cfg.port
     )

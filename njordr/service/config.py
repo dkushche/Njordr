@@ -93,8 +93,10 @@ class TLSConfigModel(pydantic.BaseModel):
         The object is made readonly, preventing modifications after instantiation.
     """
 
-    cert: pydantic.FilePath
-    key: pydantic.FilePath
+    server_cert: pydantic.FilePath
+    server_key: pydantic.FilePath
+    client_cert: pydantic.FilePath
+    client_key: pydantic.FilePath
     ca: pydantic.FilePath
 
     def __setattr__(self, _: str, __: typing.Any) -> None:
