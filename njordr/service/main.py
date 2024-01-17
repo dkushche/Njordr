@@ -86,8 +86,6 @@ async def start_handler(
         if message.bot is None:
             raise ValueError("Figure out with this")
 
-        print(url)
-
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
         await make_service_call(bot_config, url)
 

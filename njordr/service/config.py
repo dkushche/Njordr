@@ -37,6 +37,15 @@ class BotConfigModel(pydantic.BaseModel):
     token: str
     url: pydantic.HttpUrl
 
+    @pydantic.field_validator('url')
+    @classmethod
+    def parse_url(cls, value: pydantic.HttpUrl, _: pydantic.ValidationInfo) -> str:
+        """
+        Trailing whitespace breaks my logic
+        """
+
+        return str(value).rstrip("/")
+
     @pydantic.field_validator('token')
     @classmethod
     def parse_telegram_token(cls, value: str, _: pydantic.ValidationInfo) -> str:
