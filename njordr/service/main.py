@@ -7,7 +7,6 @@ Njordr broker service main
 
 import os
 import sys
-import ssl
 import logging
 import asyncio
 import httpx
@@ -170,7 +169,7 @@ async def main():
         asyncio.run(main())
     """
 
-    njordr_config = config.NjordrConfig(os.environ["NJORDR_CONFIG_DIR"])
+    njordr_config = config.NjordrConfig(os.environ["SERVICE_CONFIG_DIR"])
     dp = aiogram.Dispatcher()
 
     dp.message.register(start_handler, aiogram.filters.CommandStart())
@@ -195,10 +194,6 @@ async def main():
 
     notificaton_config = uvicorn.Config(
         "main:notifications_api",
-        ssl_cert_reqs=ssl.CERT_REQUIRED,
-        ssl_ca_certs=njordr_config.cfg.tls.ca,
-        ssl_certfile=njordr_config.cfg.tls.server_cert,
-        ssl_keyfile=njordr_config.cfg.tls.server_key,
         host="0.0.0.0",
         port=njordr_config.cfg.port
     )

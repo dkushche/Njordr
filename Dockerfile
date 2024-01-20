@@ -1,6 +1,6 @@
 FROM python:3.10-slim-bookworm
 
-WORKDIR /njordr_broker
+WORKDIR /service
 
 COPY requirements/prod.txt requirements/prod.txt 
 
