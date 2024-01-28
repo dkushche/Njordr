@@ -53,7 +53,7 @@ async def make_service_call(
         )
 
         headers = {
-            'njordr_client': f"tg:{user.id}"
+            'assume_role': f"tg:{user.id}"
         }
 
         response = client.get(
