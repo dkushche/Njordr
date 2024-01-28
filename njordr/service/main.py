@@ -7,12 +7,10 @@ Njordr broker service main
 
 import os
 import sys
-import json
 import logging
 import asyncio
-import httpx
-import typing
 
+import httpx
 import uvicorn
 import fastapi
 
@@ -26,7 +24,7 @@ import config
 
 async def make_service_call(
     bot_config: config.BotConfigModel,
-    user: typing.Optional[aiogram.types.User],
+    user: aiogram.types.User,
     endpoint: str
 ):
     """
