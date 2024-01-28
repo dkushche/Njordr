@@ -12,6 +12,11 @@ class BotConfigModel(
     roothazardlib.configs.ConstModel,
     pydantic.BaseModel
 ):
+    """
+    Njordr will connect to each tg bot listen in this section
+    and then redirect to specific instance
+    """
+
     nickname: str
     token: str
     url: pydantic.HttpUrl
@@ -19,11 +24,19 @@ class BotConfigModel(
     @pydantic.field_validator('url')
     @classmethod
     def parse_url(cls, value: pydantic.HttpUrl, _: pydantic.ValidationInfo) -> str:
+        """
+        '/' In the end creates problems for me
+        """
+
         return str(value).rstrip("/")
 
     @pydantic.field_validator('token')
     @classmethod
     def parse_telegram_token(cls, value: str, _: pydantic.ValidationInfo) -> str:
+        '''
+        Token it's not just a string lets validate it additionaly
+        '''
+
         if not re.match(r"^\d{10}:[a-zA-Z0-9]{35}$", value):
             raise ValueError("Token should match pattern bot_id:secret")
 
@@ -34,6 +47,11 @@ class TopSectionsConfigModel(
     roothazardlib.configs.ConstModel,
     pydantic.BaseModel
 ):
+    """
+    Njordr serves connect to other services and configured
+    for different tg bots
+    """
+
     server: roothazardlib.configs.ServerConfigModel
     tls: roothazardlib.configs.TLSConfigModel
     bots: typing.Dict[str, BotConfigModel]
@@ -43,6 +61,10 @@ class NjordrConfigModel(
     roothazardlib.configs.ConstModel,
     roothazardlib.configs.ConfigModel
 ):
+    """
+    Just high level model to parse object
+    """
+
     cfg: TopSectionsConfigModel
 
     def __getitem__(self, key: str) -> BotConfigModel:
@@ -59,11 +81,12 @@ class NjordrConfigModel(
         return self.cfg.bots[key]
 
 
-class NjordrConfig(roothazardlib.configs.YamlConfig):
-    _model: typing.Optional[NjordrConfigModel]
+class NjordrConfig(roothazardlib.configs.YamlConfig): # pylint: disable=too-few-public-methods
+    """
+    Njordr specific config
+    """
 
-    def set_config(self, config):
-        self._model = NjordrConfigModel(cfg=config)
+    _model: typing.Optional[NjordrConfigModel]
 
 
 def get_bot_config(bot_id: int) -> BotConfigModel:
@@ -78,10 +101,14 @@ def get_bot_config(bot_id: int) -> BotConfigModel:
         configuration for the specified bot.
     """
 
-    njordr_config: NjordrConfig = NjordrConfig()
+    njordr_config: NjordrConfig = NjordrConfig(None)
     return njordr_config.cfg.bots[str(bot_id)]
 
 
 def get_tls_config() -> roothazardlib.configs.TLSConfigModel:
-    njordr_config: NjordrConfig = NjordrConfig()
+    """
+    Get tls part of config
+    """
+
+    njordr_config: NjordrConfig = NjordrConfig(None)
     return njordr_config.cfg.tls

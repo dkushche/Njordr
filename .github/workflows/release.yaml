@@ -1,0 +1,22 @@
+name: Njordr release pipeline
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy_pypi:
+    needs: ['lint', 'build']
+    environment:
+      name: 'pypi-package'
+      url: https://pypi.org/project/njordr
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages_dir: artifact/
