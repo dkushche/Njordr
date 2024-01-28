@@ -40,14 +40,14 @@ async def make_service_call(
         await make_service_call(bot_config_instance, "/some_endpoint")
     """
 
-    njordr_config = config.NjordrConfig()
+    tls_config = config.get_tls_config()
 
     try:
         client = httpx.Client(
-            verify=njordr_config.cfg.tls.ca,
+            verify=tls_config.ca,
             cert=(
-                njordr_config.cfg.tls.client_cert,
-                njordr_config.cfg.tls.client_key
+                tls_config.client_cert,
+                tls_config.client_key
             )
         )
 
@@ -169,7 +169,10 @@ async def main():
         asyncio.run(main())
     """
 
-    njordr_config = config.NjordrConfig(os.environ["SERVICE_CONFIG_DIR"])
+    njordr_config = config.NjordrConfig(
+        f'{os.environ["SERVICE_CONFIG_DIR"]}/config.yaml'
+    )
+
     dp = aiogram.Dispatcher()
 
     dp.message.register(start_handler, aiogram.filters.CommandStart())
@@ -194,8 +197,8 @@ async def main():
 
     notificaton_config = uvicorn.Config(
         "main:notifications_api",
-        host="0.0.0.0",
-        port=njordr_config.cfg.port
+        host=njordr_config.cfg.server.host,
+        port=njordr_config.cfg.server.port
     )
 
     notification_server = uvicorn.Server(notificaton_config)

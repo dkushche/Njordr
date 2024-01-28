@@ -6,33 +6,12 @@ import re
 import typing
 import pydantic
 
-import yaml
+import roothazardlib.configs
 
-class BotConfigModel(pydantic.BaseModel):
-    """
-    A Pydantic model representing the configuration for a Telegram bot.
-
-    Attributes:
-        nickname (str): The nickname of the bot.
-        token (str): The token associated with the Telegram bot.
-        url (pydantic.HttpUrl): The URL associated with the bot backedn API.
-
-    Class Methods:
-        parse_telegram_token(cls, value: str, _: pydantic.ValidationInfo) -> str:
-            A class method to validate and parse the Telegram bot token.
-            Raises a ValueError if the token does not match the expected pattern.
-
-    Methods:
-        __setattr__(self, _: str, __: typing.Any) -> None:
-            Overrides the default __setattr__ method to make the object readonly.
-            Raises an AttributeError if any attempt is made to modify the object.
-
-    Note:
-        This class is a Pydantic BaseModel, providing data validation and parsing.
-        The `parse_telegram_token` method validates the format of the Telegram bot token.
-        The object is made readonly, preventing modifications after instantiation.
-    """
-
+class BotConfigModel(
+    roothazardlib.configs.ConstModel,
+    pydantic.BaseModel
+):
     nickname: str
     token: str
     url: pydantic.HttpUrl
@@ -40,167 +19,31 @@ class BotConfigModel(pydantic.BaseModel):
     @pydantic.field_validator('url')
     @classmethod
     def parse_url(cls, value: pydantic.HttpUrl, _: pydantic.ValidationInfo) -> str:
-        """
-        Trailing whitespace breaks my logic
-        """
-
         return str(value).rstrip("/")
 
     @pydantic.field_validator('token')
     @classmethod
     def parse_telegram_token(cls, value: str, _: pydantic.ValidationInfo) -> str:
-        """
-        Validate and parse the Telegram bot token.
-
-        Args:
-            value (str): The Telegram bot token to be validated.
-            _: Ignored parameter, required for Pydantic validators.
-
-        Returns:
-            str: The validated Telegram bot token.
-
-        Raises:
-            ValueError: If the token does not match the expected pattern.
-        """
-
         if not re.match(r"^\d{10}:[a-zA-Z0-9]{35}$", value):
             raise ValueError("Token should match pattern bot_id:secret")
 
         return value
 
-    def __setattr__(self, _: str, __: typing.Any) -> None:
-        """
-        Override the default __setattr__ method to make the object readonly.
 
-        Args:
-            _: Ignored parameter.
-            __: Ignored parameter.
-
-        Raises:
-            AttributeError: If any attempt is made to modify the object.
-        """
-
-        raise AttributeError("Object is readonly")
-
-
-class TLSConfigModel(pydantic.BaseModel):
-    """
-    A Pydantic model representing the TLS configuration for a server.
-
-    Attributes:
-        cert (pydantic.FilePath): Path to the TLS certificate file.
-        key (pydantic.FilePath): Path to the TLS private key file.
-        ca (pydantic.FilePath): Path to the TLS certificate authority file.
-
-    Methods:
-        __setattr__(self, _: str, __: typing.Any) -> None:
-            Overrides the default __setattr__ method to make the object readonly.
-            Raises an AttributeError if any attempt is made to modify the object.
-
-    Note:
-        This class is a Pydantic BaseModel, providing data validation and parsing.
-        The object is made readonly, preventing modifications after instantiation.
-    """
-
-    client_cert: pydantic.FilePath
-    client_key: pydantic.FilePath
-    ca: pydantic.FilePath
-
-    def __setattr__(self, _: str, __: typing.Any) -> None:
-        """
-        Override the default __setattr__ method to make the object readonly.
-
-        Args:
-            _: Ignored parameter.
-            __: Ignored parameter.
-
-        Raises:
-            AttributeError: If any attempt is made to modify the object.
-        """
-
-        raise AttributeError("Object is readonly")
-
-
-class TopSectionsConfigModel(pydantic.BaseModel):
-    """
-    A Pydantic model representing the configuration for top sections.
-
-    Attributes:
-        port (pydantic.PositiveInt): The port number for the server.
-        tls (TLSConfigModel): The TLS configuration for the server.
-        bots (typing.Dict[str, BotConfigModel]): A dictionary of bot configurations.
-
-    Methods:
-        __setattr__(self, _: str, __: typing.Any) -> None:
-            Overrides the default __setattr__ method to make the object readonly.
-            Raises an AttributeError if any attempt is made to modify the object.
-
-    Note:
-        This class is a Pydantic BaseModel, providing data validation and parsing.
-        The object is made readonly, preventing modifications after instantiation.
-    """
-
-    port: pydantic.PositiveInt
-    tls: TLSConfigModel
+class TopSectionsConfigModel(
+    roothazardlib.configs.ConstModel,
+    pydantic.BaseModel
+):
+    server: roothazardlib.configs.ServerConfigModel
+    tls: roothazardlib.configs.TLSConfigModel
     bots: typing.Dict[str, BotConfigModel]
 
-    def __setattr__(self, _: str, __: typing.Any) -> None:
-        """
-        Override the default __setattr__ method to make the object readonly.
 
-        Args:
-            _: Ignored parameter.
-            __: Ignored parameter.
-
-        Raises:
-            AttributeError: If any attempt is made to modify the object.
-        """
-
-        raise AttributeError("Object is readonly")
-
-
-class NjordrConfigModel(pydantic.BaseModel):
-    """
-    A Pydantic model representing the configuration for the Njordr application.
-
-    Attributes:
-        bots (typing.Dict[str, BotConfigModel]):
-            A dictionary mapping bot ids to their respective configurations.
-
-    Methods:
-        __setattr__(self, _: str, __: typing.Any) -> None:
-            Overrides the default __setattr__ method to make the object readonly.
-            Raises an AttributeError if any attempt is made to modify the object.
-
-        __getitem__(self, key: str) -> BotConfigModel:
-            Retrieves the configuration for a specific bot.
-
-        Parameters:
-            key (str): The name of the bot.
-
-        Returns:
-            BotConfigModel: The configuration for the specified bot.
-
-    Note:
-        This class is a Pydantic BaseModel, providing data validation and parsing.
-        The object is made readonly, preventing modifications after instantiation.
-    """
-
+class NjordrConfigModel(
+    roothazardlib.configs.ConstModel,
+    roothazardlib.configs.ConfigModel
+):
     cfg: TopSectionsConfigModel
-
-    def __setattr__(self, _: str, __: typing.Any) -> None:
-        """
-        Override the default __setattr__ method to make the object readonly.
-
-        Args:
-            _: Ignored parameter.
-            __: Ignored parameter.
-
-        Raises:
-            AttributeError: If any attempt is made to modify the object.
-        """
-
-        raise AttributeError("Object is readonly")
 
     def __getitem__(self, key: str) -> BotConfigModel:
         """
@@ -216,47 +59,11 @@ class NjordrConfigModel(pydantic.BaseModel):
         return self.cfg.bots[key]
 
 
-class Singletone(type):
-    """
-    Singletone metaclass for making singletones
-    """
+class NjordrConfig(roothazardlib.configs.YamlConfig):
+    _model: typing.Optional[NjordrConfigModel]
 
-    __instances: dict[type, typing.Any] = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls.__instances:
-            cls.__instances[cls] = super().__call__(*args, **kwargs)
-
-        return cls.__instances[cls]
-
-class NjordrConfig(metaclass=Singletone):
-    """
-    NjordrConfig singletone
-    """
-
-    __model: typing.Optional[NjordrConfigModel] = None
-
-    def __init__(self, config_dir: typing.Optional[str] = None) -> None:
-        if self.__model is None:
-            with open(f"{config_dir}/config.yaml", mode="r", encoding="utf-8") as config_file:
-                config_obj = yaml.safe_load(config_file)
-
-            for key, value in config_obj["tls"].items():
-                config_obj["tls"][key] = f"{config_dir}/{value}"
-
-            self.__model = NjordrConfigModel(cfg=config_obj)
-
-    def __setattr__(self, name: str, value: typing.Any) -> None:
-        if "__" in name:
-            super().__setattr__(name, value)
-        else:
-            raise AttributeError("Object is readonly")
-
-    def __getattribute__(self, name: str) -> typing.Any:
-        if "__" in name:
-            return super().__getattribute__(name)
-
-        return getattr(self.__model, name)
+    def set_config(self, config):
+        self._model = NjordrConfigModel(cfg=config)
 
 
 def get_bot_config(bot_id: int) -> BotConfigModel:
@@ -273,3 +80,8 @@ def get_bot_config(bot_id: int) -> BotConfigModel:
 
     njordr_config: NjordrConfig = NjordrConfig()
     return njordr_config.cfg.bots[str(bot_id)]
+
+
+def get_tls_config() -> roothazardlib.configs.TLSConfigModel:
+    njordr_config: NjordrConfig = NjordrConfig()
+    return njordr_config.cfg.tls
