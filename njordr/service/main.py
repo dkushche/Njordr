@@ -7,9 +7,11 @@ Njordr broker service main
 
 import os
 import sys
+import json
 import logging
 import asyncio
 import httpx
+import typing
 
 import uvicorn
 import fastapi
@@ -24,6 +26,7 @@ import config
 
 async def make_service_call(
     bot_config: config.BotConfigModel,
+    user: typing.Optional[aiogram.types.User],
     endpoint: str
 ):
     """
@@ -51,8 +54,13 @@ async def make_service_call(
             )
         )
 
+        headers = {
+            'njordr_client': f"tg:{user.id}"
+        }
+
         response = client.get(
             f'{bot_config.url}{endpoint}',
+            headers=headers
         )
 
         print(f"{type(response.content)}: {response.content!r}")
@@ -82,11 +90,11 @@ async def start_handler(
     """
 
     async with url_state_handler.UrlStateHandler("/", state, False) as url:
-        if message.bot is None:
-            raise ValueError("Figure out with this")
+        if message.bot is None or message.from_user is None:
+            raise ValueError("Unexpected behaviour")
 
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
-        await make_service_call(bot_config, url)
+        await make_service_call(bot_config, message.from_user, url)
 
 
 async def message_handler(
@@ -109,12 +117,11 @@ async def message_handler(
     """
 
     async with url_state_handler.UrlStateHandler(None, state, True) as url:
-        if message.bot is None:
-            raise ValueError("Figure out with this")
+        if message.bot is None or message.from_user is None:
+            raise ValueError("Unexpected behaviour")
 
-        print(url)
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
-        await message.answer(str(bot_config.url))
+        await make_service_call(bot_config, message.from_user, url)
 
 
 async def callback_query_handler(
@@ -137,12 +144,11 @@ async def callback_query_handler(
     """
 
     async with url_state_handler.UrlStateHandler(None, state, True) as url:
-        if callback_query.bot is None:
-            raise ValueError("Figure out with this")
+        if callback_query.bot is None or callback_query.from_user is None:
+            raise ValueError("Unexpected behaviour")
 
-        print(url)
         bot_config: config.BotConfigModel = config.get_bot_config(callback_query.bot.id)
-        await callback_query.answer(str(bot_config.url))
+        await make_service_call(bot_config, callback_query.from_user, url)
 
 
 notifications_api = fastapi.FastAPI()
