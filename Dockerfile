@@ -6,6 +6,6 @@ COPY requirements/prod.txt requirements/prod.txt
 
 RUN pip install -r requirements/prod.txt 
 
-COPY njordr njordr
+COPY njordr_service njordr
 
-CMD ["python3", "njordr/service/main.py"]
+CMD ["python3", "njordr/main.py"]

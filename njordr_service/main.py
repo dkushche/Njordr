@@ -8,12 +8,15 @@ Njordr broker service main
 import os
 import sys
 import json
+import typing
 import logging
 import asyncio
 
 import httpx
 import uvicorn
 import fastapi
+
+import pydantic
 
 import aiogram
 import aiogram.types
@@ -22,16 +25,49 @@ import aiogram.fsm.context
 
 import url_state_handler
 import config
-import lib
+import njordr
 
-BOTS_SESSIONS: dict[str, httpx.Client] = {}
+BOTS_SESSIONS: dict[pydantic.HttpUrl, httpx.Client] = {}
+
+def generate_keyboard(
+    props: list[njordr.PropModel]
+) -> typing.Optional[aiogram.types.InlineKeyboardMarkup]:
+    """
+    Generates inline keyboard fomr service message props
+    """
+
+    if len(props) == 0:
+        return None
+
+    buttons = []
+
+    for prop in props:
+        buttons.append(
+            [
+                aiogram.types.InlineKeyboardButton(
+                    text=prop.text,
+                    callback_data=prop.action.model_dump_json()
+                )
+            ]
+        )
+
+    keyboard = aiogram.types.InlineKeyboardMarkup(
+        inline_keyboard=buttons
+    )
+
+    return keyboard
+
 
 async def make_service_call(
     bot_config: config.BotConfigModel,
     user: aiogram.types.User,
-    action: lib.Action,
+    action: njordr.Action,
     full_endpoint: str
-):
+) -> typing.Optional[njordr.MessageModel]:
+    """
+    Make async call to end service to get MessageModel
+    """
+
     async_client = BOTS_SESSIONS[bot_config.url]
 
     headers = {
@@ -46,32 +82,63 @@ async def make_service_call(
     if action.data is not None:
         request_parameters["data"] = action.data
 
-    response = await getattr(async_client, action.method)(**request_parameters)
+    try:
+        response = await getattr(async_client, action.method)(**request_parameters)
+    except httpx.ConnectError as error:
+        logging.error(
+            "Connection error: %s; %s", request_parameters['url'], error
+        )
 
-    print(f"{type(response.content)}: {response.content!r}")
+        return None
+
+    service_response = json.loads(response.contect.decode("utf-8"))
+    return njordr.Proto(msg=service_response).msg
 
 
 async def start_handler(
     message: aiogram.types.Message,
     state: aiogram.fsm.context.FSMContext
 ):
+    """
+    Handles /start in user chat
+    """
+
     async with url_state_handler.UrlStateHandler("/", state, False) as url:
         if message.bot is None or message.from_user is None:
             raise ValueError("Unexpected behaviour")
 
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
-        action: lib.Action = lib.Action(
+        action: njordr.Action = njordr.Action(
             method="get", endpoint="/", data=None
         )
 
-        await make_service_call(bot_config, message.from_user, action, url)
+        service_msg = await make_service_call(
+            bot_config, message.from_user, action, url
+        )
+
+        if service_msg is not None:
+            keyboard = generate_keyboard(service_msg.props)
+
+            await message.answer(
+                text=service_msg.text,
+                reply_markup=keyboard
+            )
+        else:
+            await message.answer(
+                text="Internal error",
+                reply_markup=None
+            )
 
 
 async def message_handler(
     message: aiogram.types.Message,
     state: aiogram.fsm.context.FSMContext
-):    
-    action: lib.Action = lib.Action(
+):
+    """
+    handles manual typing in user chat
+    """
+
+    action: njordr.Action = njordr.Action(
         method="post", endpoint="", data=message.text
     )
 
@@ -80,15 +147,46 @@ async def message_handler(
             raise ValueError("Unexpected behaviour")
 
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
-        await make_service_call(bot_config, message.from_user, action, url)
+
+        service_msg = await make_service_call(
+            bot_config, message.from_user, action, url
+        )
+
+        if service_msg is not None:
+            keyboard = generate_keyboard(service_msg.props)
+
+            await message.answer(
+                text=service_msg.text,
+                reply_markup=keyboard
+            )
+        else:
+            await message.answer(
+                text="Internal error",
+                reply_markup=None
+            )
 
 
 async def callback_query_handler(
     callback_query: aiogram.types.CallbackQuery,
     state: aiogram.fsm.context.FSMContext
-):
+) -> None:
+    """
+    Handles buttons clicks in user chat
+    """
+
+    if callback_query.message is None:
+        logging.critical("No message in callback query")
+        return
+
+    if callback_query.data is None:
+        await callback_query.message.answer(
+            text="Internal error",
+            reply_markup=None
+        )
+        return
+
     cb_data = json.loads(callback_query.data)
-    action: lib.Action = lib.Action(
+    action: njordr.Action = njordr.Action(
         **cb_data
     )
 
@@ -98,7 +196,22 @@ async def callback_query_handler(
 
         bot_config: config.BotConfigModel = config.get_bot_config(callback_query.bot.id)
 
-        await make_service_call(bot_config, callback_query.from_user, action, url)
+        service_msg = await make_service_call(
+            bot_config, callback_query.from_user, action, url
+        )
+
+        if service_msg is None:
+            await callback_query.message.answer(
+                text="Internal error",
+                reply_markup=None
+            )
+        else:
+            keyboard = generate_keyboard(service_msg.props)
+
+            await callback_query.message.edit_text(
+                text=service_msg.text,
+                reply_markup=keyboard
+            )
 
 
 notifications_api = fastapi.FastAPI()
@@ -110,7 +223,7 @@ async def notification(req: fastapi.Request):
     """
 
     print(req)
-    return {"message": "kek"}
+    return {"result": "Unsupported"}
 
 
 async def main():
