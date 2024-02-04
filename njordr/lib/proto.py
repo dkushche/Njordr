@@ -5,6 +5,12 @@ Njordr interaction protocol for Bots Services
 import typing
 import pydantic
 
+class Action(pydantic.BaseModel):
+    method: typing.Literal["get", "post"]
+    endpoint: str
+    data: typing.Optional[str]
+
+
 class PropModel(pydantic.BaseModel):
     """
     Prop
@@ -13,7 +19,8 @@ class PropModel(pydantic.BaseModel):
     """
 
     text: str
-    action_endpoint: str
+    action: Action
+
 
 class MessageModel(pydantic.BaseModel):
     """
@@ -23,7 +30,7 @@ class MessageModel(pydantic.BaseModel):
     """
 
     text: str
-    actions: typing.List[PropModel]
+    props: typing.List[PropModel]
 
 class Proto(pydantic.BaseModel):
     """

@@ -7,6 +7,7 @@ Njordr broker service main
 
 import os
 import sys
+import json
 import logging
 import asyncio
 
@@ -21,132 +22,83 @@ import aiogram.fsm.context
 
 import url_state_handler
 import config
+import lib
+
+BOTS_SESSIONS: dict[str, httpx.Client] = {}
 
 async def make_service_call(
     bot_config: config.BotConfigModel,
     user: aiogram.types.User,
-    endpoint: str
+    action: lib.Action,
+    full_endpoint: str
 ):
-    """
-    Make an asynchronous HTTP service call.
+    async_client = BOTS_SESSIONS[bot_config.url]
 
-    This function sends an HTTP GET request to the specified endpoint
-    using the provided bot configuration.
+    headers = {
+        'assume_role': f"tg:{user.id}"
+    }
 
-    Args:
-        bot_config (config.BotConfigModel): The bot configuration.
-        endpoint (str): The endpoint to call.
+    request_parameters = {
+        "headers": headers,
+        "url": f"{bot_config.url}{full_endpoint}",
+    }
 
-    Example Usage:
-        await make_service_call(bot_config_instance, "/some_endpoint")
-    """
+    if action.data is not None:
+        request_parameters["data"] = action.data
 
-    tls_config = config.get_tls_config()
+    response = await getattr(async_client, action.method)(**request_parameters)
 
-    try:
-        client = httpx.Client(
-            verify=tls_config.ca,
-            cert=(
-                tls_config.client_cert,
-                tls_config.client_key
-            )
-        )
-
-        headers = {
-            'assume_role': f"tg:{user.id}"
-        }
-
-        response = client.get(
-            f'{bot_config.url}{endpoint}',
-            headers=headers
-        )
-
-        print(f"{type(response.content)}: {response.content!r}")
-    except (httpx.ConnectError, httpx.ConnectTimeout) as e:
-        print(f"Caught: {e}")
+    print(f"{type(response.content)}: {response.content!r}")
 
 
 async def start_handler(
     message: aiogram.types.Message,
     state: aiogram.fsm.context.FSMContext
 ):
-    """
-    Handle the '/start' command.
-
-    This function is intended to be used as a
-    command handler for the '/start' command in Aiogram.
-    It initializes a URL state using the UrlStateHandler,retrieves the bot
-    configuration based on the message's bot ID, and makes a service call
-    using the configured bot and URL.
-
-    Args:
-        message (aiogram.types.Message): The incoming message instance.
-        state (aiogram.fsm.context.FSMContext): The FSM context.
-
-    Example Usage:
-        dp.message.register(start_handler, commands=['start'])
-    """
-
     async with url_state_handler.UrlStateHandler("/", state, False) as url:
         if message.bot is None or message.from_user is None:
             raise ValueError("Unexpected behaviour")
 
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
-        await make_service_call(bot_config, message.from_user, url)
+        action: lib.Action = lib.Action(
+            method="get", endpoint="/", data=None
+        )
+
+        await make_service_call(bot_config, message.from_user, action, url)
 
 
 async def message_handler(
     message: aiogram.types.Message,
     state: aiogram.fsm.context.FSMContext
-):
-    """
-    Handle incoming messages.
-
-    This function is intended to be used as a message handler in Aiogram.
-    It retrieves the bot configuration based on the message's bot ID,
-    and replies to the message with the configured URL.
-
-    Args:
-        message (aiogram.types.Message): The incoming message instance.
-        state (aiogram.fsm.context.FSMContext): The FSM context.
-
-    Example Usage:
-        dp.message.register(message_handler)
-    """
+):    
+    action: lib.Action = lib.Action(
+        method="post", endpoint="", data=message.text
+    )
 
     async with url_state_handler.UrlStateHandler(None, state, True) as url:
         if message.bot is None or message.from_user is None:
             raise ValueError("Unexpected behaviour")
 
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
-        await make_service_call(bot_config, message.from_user, url)
+        await make_service_call(bot_config, message.from_user, action, url)
 
 
 async def callback_query_handler(
     callback_query: aiogram.types.CallbackQuery,
     state: aiogram.fsm.context.FSMContext
 ):
-    """
-    Handle callback queries.
+    cb_data = json.loads(callback_query.data)
+    action: lib.Action = lib.Action(
+        **cb_data
+    )
 
-    This function is intended to be used as a callback query handler in Aiogram.
-    It retrieves the bot configuration based on the callback_query's bot ID,
-    and answers the callback query with the configured URL.
-
-    Args:
-        callback_query (aiogram.types.CallbackQuery): The callback query instance.
-        state (aiogram.fsm.context.FSMContext): The FSM context.
-
-    Example Usage:
-        dp.callback_query.register(callback_query_handler)
-    """
-
-    async with url_state_handler.UrlStateHandler(None, state, True) as url:
+    async with url_state_handler.UrlStateHandler(action.endpoint, state, True) as url:
         if callback_query.bot is None or callback_query.from_user is None:
             raise ValueError("Unexpected behaviour")
 
         bot_config: config.BotConfigModel = config.get_bot_config(callback_query.bot.id)
-        await make_service_call(bot_config, callback_query.from_user, url)
+
+        await make_service_call(bot_config, callback_query.from_user, action, url)
 
 
 notifications_api = fastapi.FastAPI()
@@ -191,6 +143,14 @@ async def main():
             parse_mode=aiogram.enums.ParseMode.HTML,
         )
 
+        BOTS_SESSIONS[bot_config.url] = httpx.AsyncClient(
+            verify=njordr_config.cfg.tls.ca,
+            cert=(
+                njordr_config.cfg.tls.client_cert,
+                njordr_config.cfg.tls.client_key
+            )
+        )
+
         await bot.set_my_commands(
             [
                 { 'command': '/start', 'description': 'Start'}
@@ -211,6 +171,9 @@ async def main():
 
     await asyncio.create_task(dp.start_polling(*bots))
     await notification_server.shutdown()
+
+    for async_client in BOTS_SESSIONS.values():
+        await async_client.aclose()
 
 
 if __name__ == "__main__":
