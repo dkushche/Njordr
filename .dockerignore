@@ -1,4 +1,5 @@
 *
 
 !njordr_service
-!requirements
+!poetry.lock
+!pyproject.toml

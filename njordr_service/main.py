@@ -226,7 +226,7 @@ async def notification(req: fastapi.Request):
     return {"result": "Unsupported"}
 
 
-async def main():
+async def njordr_service():
     """
     Main function for initializing and running the Aiogram bots.
 
@@ -289,6 +289,13 @@ async def main():
         await async_client.aclose()
 
 
-if __name__ == "__main__":
+def main():
+    coroutine = njordr_service()
+
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+
+    asyncio.run(coroutine)
+
+
+if __name__ == "__main__":
+    main()
