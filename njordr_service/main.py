@@ -174,8 +174,10 @@ async def callback_query_handler(
     Handles buttons clicks in user chat
     """
 
-    if callback_query.message is None:
-        logging.critical("No message in callback query")
+    if not isinstance(callback_query.message, aiogram.types.Message):
+        logging.critical(
+            f"Problem with message in callback query: {callback_query.message}"
+        )
         return
 
     if callback_query.data is None:
@@ -235,7 +237,7 @@ async def njordr_service():
     sets the '/start' command for each bot, and starts polling for incoming updates.
 
     Example Usage:
-        asyncio.run(main())
+        asyncio.run(njordr_service())
     """
 
     njordr_config = config.NjordrConfig(
@@ -290,6 +292,8 @@ async def njordr_service():
 
 
 def main():
+    """Run async njordr service"""
+
     coroutine = njordr_service()
 
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
