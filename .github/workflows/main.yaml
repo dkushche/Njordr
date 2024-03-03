@@ -19,14 +19,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements/dev.txt
+          python -m pip install --upgrade pip poetry
+          poetry install
 
       - name: Analysing the code with pylint
-        run: pylint `find njordr_service -name "*.py"`
+        run: poetry run python3 -m pylint `find njordr_service -name "*.py"`
 
       - name: Analysing the typing with mypy
-        run: mypy `find njordr_service -name "*.py"`
+        run: poetry run python3 -m mypy `find njordr_service -name "*.py"`
 
   build_and_deploy_image:
     needs: ['lint']

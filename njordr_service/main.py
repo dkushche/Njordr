@@ -176,7 +176,8 @@ async def callback_query_handler(
 
     if not isinstance(callback_query.message, aiogram.types.Message):
         logging.critical(
-            f"Problem with message in callback query: {callback_query.message}"
+            "Problem with message in callback query: %s",
+            callback_query.message
         )
         return
 
