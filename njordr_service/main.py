@@ -6,11 +6,10 @@ Njordr broker service main
 """
 
 import os
-import sys
 import json
 import typing
-import logging
 import asyncio
+import logging.config
 
 import httpx
 import uvicorn
@@ -29,6 +28,8 @@ import njordr
 
 BOTS_SESSIONS: dict[pydantic.HttpUrl, httpx.Client] = {}
 
+logger = logging.getLogger("njordr_service")
+
 def generate_keyboard(
     props: list[njordr.PropModel]
 ) -> typing.Optional[aiogram.types.InlineKeyboardMarkup]:
@@ -41,7 +42,14 @@ def generate_keyboard(
 
     buttons = []
 
+    logger.info("Generating inline keyboard")
+
     for prop in props:
+        logger.info(
+            "Generate button with text: %s; callback_data: %s",
+            prop.text, prop.action.model_dump_json()
+        )
+
         buttons.append(
             [
                 aiogram.types.InlineKeyboardButton(
@@ -54,6 +62,8 @@ def generate_keyboard(
     keyboard = aiogram.types.InlineKeyboardMarkup(
         inline_keyboard=buttons
     )
+
+    logger.info("Generation of inline ketboard finished")
 
     return keyboard
 
@@ -82,17 +92,26 @@ async def make_service_call(
     if action.data is not None:
         request_parameters["data"] = action.data
 
+    logger.info(
+        "Making service call %s(%s)",
+        action.method, request_parameters
+    )
+
     try:
         response = await getattr(async_client, action.method)(**request_parameters)
     except httpx.ConnectError as error:
-        logging.error(
+        logger.error(
             "Connection error: %s; %s", request_parameters['url'], error
         )
 
         return None
 
     service_response = json.loads(response.contect.decode("utf-8"))
-    return njordr.Proto(msg=service_response).msg
+    message = njordr.Proto(msg=service_response).msg
+
+    logger.info("Service response: %s", message)
+
+    return message
 
 
 async def start_handler(
@@ -112,6 +131,10 @@ async def start_handler(
             method="get", endpoint="/", data=None
         )
 
+        logger.info(
+            "Received message with action: %s", action
+        )
+
         service_msg = await make_service_call(
             bot_config, message.from_user, action, url
         )
@@ -124,6 +147,8 @@ async def start_handler(
                 reply_markup=keyboard
             )
         else:
+            logger.error("Service message is None")
+
             await message.answer(
                 text="Internal error",
                 reply_markup=None
@@ -140,6 +165,10 @@ async def message_handler(
 
     action: njordr.Action = njordr.Action(
         method="post", endpoint="", data=message.text
+    )
+
+    logger.info(
+        "Received message with action: %s", action
     )
 
     async with url_state_handler.UrlStateHandler(None, state, True) as url:
@@ -160,6 +189,8 @@ async def message_handler(
                 reply_markup=keyboard
             )
         else:
+            logger.error("Service message is None")
+
             await message.answer(
                 text="Internal error",
                 reply_markup=None
@@ -175,7 +206,7 @@ async def callback_query_handler(
     """
 
     if not isinstance(callback_query.message, aiogram.types.Message):
-        logging.critical(
+        logger.critical(
             "Problem with message in callback query: %s",
             callback_query.message
         )
@@ -193,27 +224,37 @@ async def callback_query_handler(
         **cb_data
     )
 
-    async with url_state_handler.UrlStateHandler(action.endpoint, state, True) as url:
+    logger.info(
+        "Received callback querry with action: %s", action
+    )
+
+    async with url_state_handler.UrlStateHandler(
+        action.endpoint, state, True
+    ) as url:
         if callback_query.bot is None or callback_query.from_user is None:
             raise ValueError("Unexpected behaviour")
 
-        bot_config: config.BotConfigModel = config.get_bot_config(callback_query.bot.id)
+        bot_config: config.BotConfigModel = config.get_bot_config(
+            callback_query.bot.id
+        )
 
         service_msg = await make_service_call(
             bot_config, callback_query.from_user, action, url
         )
 
-        if service_msg is None:
-            await callback_query.message.answer(
-                text="Internal error",
-                reply_markup=None
-            )
-        else:
+        if service_msg is not None:
             keyboard = generate_keyboard(service_msg.props)
 
             await callback_query.message.edit_text(
                 text=service_msg.text,
                 reply_markup=keyboard
+            )
+        else:
+            logger.error("Service message is None")
+
+            await callback_query.message.answer(
+                text="Internal error",
+                reply_markup=None
             )
 
 
@@ -225,7 +266,7 @@ async def notification(req: fastapi.Request):
     Under development
     """
 
-    print(req)
+    logger.info("Notification: %s", req)
     return {"result": "Unsupported"}
 
 
@@ -273,6 +314,11 @@ async def njordr_service():
             ]
         )
 
+        logger.info(
+            "Register handler for %s:%s",
+            bot_config.nickname, bot_config.url
+        )
+
         bots.append(bot)
 
     notificaton_config = uvicorn.Config(
@@ -295,9 +341,15 @@ async def njordr_service():
 def main():
     """Run async njordr service"""
 
-    coroutine = njordr_service()
+    with open(
+        "njordr_service/logging_config.json",
+        encoding="utf-8"
+    ) as logging_cgf_fd:
+        logging_cfg = json.load(logging_cgf_fd)
 
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    logging.config.dictConfig(logging_cfg)
+
+    coroutine = njordr_service()
 
     asyncio.run(coroutine)
 

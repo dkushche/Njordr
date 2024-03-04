@@ -4,7 +4,10 @@ Handles user url changes
 
 import typing
 import pathlib
+import logging
 import aiogram.fsm.context
+
+logger = logging.getLogger("njordr_service")
 
 class UrlStateHandler:
     """
@@ -50,6 +53,8 @@ class UrlStateHandler:
             path = path.resolve()
 
             self.__state_data["url"] = path.as_posix()
+
+        logger.info("Formed base url: %s", self.__state_data["url"])
 
         return self.__state_data["url"]
 
