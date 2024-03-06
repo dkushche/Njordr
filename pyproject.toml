@@ -15,6 +15,7 @@ fastapi = "^0.110.0"
 aiogram = "^3.4.1"
 roothazardlib = "^1.6"
 njordr = "^1.2"
+pytest-asyncio = "^0.23.5"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.1.0"
@@ -22,6 +23,8 @@ mypy = "^1.8.0"
 
 # python3 -m pylint `find njordr_service -name "*.py"`
 # python3 -m mypy `find njordr_service -name "*.py"`
+pytest = "^8.0.2"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core"]
