@@ -122,13 +122,13 @@ async def start_handler(
     Handles /start in user chat
     """
 
-    async with url_state_handler.UrlStateHandler("/", state, False) as url:
+    async with url_state_handler.UrlStateHandler("", state, False) as url:
         if message.bot is None or message.from_user is None:
             raise ValueError("Unexpected behaviour")
 
         bot_config: config.BotConfigModel = config.get_bot_config(message.bot.id)
         action: njordr.Action = njordr.Action(
-            method="get", endpoint="/", data=None
+            method="get", endpoint=url, data=None
         )
 
         logger.info(

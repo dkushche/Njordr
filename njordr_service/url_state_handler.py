@@ -45,11 +45,14 @@ class UrlStateHandler:
             raise ValueError("URL not found")
 
         if not self.__prev_url_required:
-            self.__state_data["url"] = ""
+            self.__state_data["url"] = "/"
 
         if self.__new_url is not None:
             path = pathlib.Path(self.__state_data["url"])
-            path /= self.__new_url
+
+            if len(self.__new_url) > 0:
+                path /= self.__new_url
+
             path = path.resolve()
 
             self.__state_data["url"] = path.as_posix()
